@@ -1,0 +1,4 @@
+# renovate: datasource=github-releases depName=kubernetes-sigs/kind
+KIND_VERSION: v0.19.0
+# renovate: datasource=golang-version depName=go
+GO_VRSION: 1.19.0
