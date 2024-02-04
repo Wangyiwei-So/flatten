@@ -22,8 +22,7 @@
     {
       "groupName": "Go",
       "matchDepNames": [
-        "go",
-        "docker.io/library/golang"
+        "go"
       ]
     }
   ],
