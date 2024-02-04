@@ -1,0 +1,20 @@
+{
+    "extends": ["config:base"],
+    "packageRules": [
+        {
+          "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+          "requiredStatusChecks": null,
+          "automerge": true
+        }
+    ],
+    "regexManagers": [
+        {
+          "fileMatch": [
+            "test\\.ya?ml$"
+          ],
+          "matchStrings": [
+            "// renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+go (?<currentValue>.*)"
+          ]
+        }
+      ]
+}
