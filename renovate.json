@@ -1,0 +1,21 @@
+{
+    "extends": ["config:base"],
+    "packageRules": [
+      {
+        "packagePatterns": ["^golang.org/x/"],
+        "updateTypes": ["minor", "patch"],
+        "packageFile": ["go.mod"]
+      },
+      {
+        "packagePatterns": ["^github.com/"],
+        "updateTypes": ["minor", "patch"],
+        "packageFile": ["go.mod"]
+      },
+      {
+        "packagePatterns": ["^rust-lang/"],
+        "updateTypes": ["minor", "patch"],
+        "packageFile": ["Cargo.toml"]
+      }
+    ]
+  }
+  

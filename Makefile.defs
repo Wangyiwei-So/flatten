@@ -1,0 +1,61 @@
+VARS_OLD := $(.VARIABLES) #存Makefile提供的变量，用于过滤
+
+SHELL := /usr/bin/env bash
+.SHELLFLAGS := -eu -o pipefail -c
+
+ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+RELATIVE_DIR := $(shell echo $(realpath .) | sed "s;$(ROOT_DIR)[/]*;;")
+
+#  go语言相关
+GOPATH ?= $(shell go env GOPATH)
+GOROOT ?= $(shell go env GOROOT)
+GOBIN ?= $(shell go env GOBIN)
+GO_BUILD_FLAGS =
+GO_TEST_FLAGS =
+GO_CLEAN_FLAGS =
+GO_BUILD_LDFLAGS =
+ifeq "$(GOPATH)" ""
+  #$(error Please set the environment variable GOPATH before running `make`)
+endif
+
+ifeq "$(GOBIN)" ""
+	GOBIN=${GOPATH}/bin
+endif
+
+
+GOARCH ?= $(shell go env GOARCH)
+GOOS ?= $(shell go env GOOS)
+
+#  安装工具
+INSTALL = install
+
+CONTAINER_ENGINE?=docker
+DOCKER_FLAGS?=
+DOCKER_BUILD_FLAGS?=
+
+# use gsed if available, otherwise use sed.
+# gsed is needed for MacOS to make in-place replacement work correctly.
+SED ?= $(if $(shell command -v gsed),gsed,sed)
+
+DOCKER_IMAGE_TAG?=latest
+
+export KUBECTL ?= kubectl
+
+#  swagger
+SWAGGER_VERSION := v0.30.3
+SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(ROOT_DIR):$(ROOT_DIR) -w $(ROOT_DIR) --entrypoint swagger quay.io/goswagger/swagger:$(SWAGGER_VERSION)
+
+# 获取终端宽度
+TERM_WIDTH := $(shell tput cols)
+# 生成等宽的符号行
+define print_line
+	@echo $(shell printf '$(1)%.0s' $$(seq 1 $(TERM_WIDTH)))
+endef
+
+define print_help_line
+  @printf "  \033[36m%-29s\033[0m %s.\n" $(1) $(2)
+endef
+
+define print_help_from_makefile
+  @awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z0-9][a-zA-Z0-9 _-]*:.*?##/ { split($$1, targets, " "); for (i in targets) { printf "  \033[36m%-28s\033[0m %s\n", targets[i], $$2 } } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+endef
