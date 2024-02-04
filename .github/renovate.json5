@@ -22,7 +22,7 @@
     {
       "enabled": "false",
       "matchFiles": [
-        "test.yaml"
+        "aa.yaml"
       ],
       "matchDepNames": [
         "go"
