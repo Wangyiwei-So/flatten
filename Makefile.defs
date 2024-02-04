@@ -47,6 +47,10 @@ export KUBECTL ?= kubectl
 SWAGGER_VERSION := v0.30.3
 SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(ROOT_DIR):$(ROOT_DIR) -w $(ROOT_DIR) --entrypoint swagger quay.io/goswagger/swagger:$(SWAGGER_VERSION)
 
+# renovate: datasource=docker depName=golangci/golangci-lint
+GOLANGCILINT_WANT_VERSION = v1.54.1
+GOLANGCILINT_IMAGE_SHA = sha256:e699df940be1810b08ba6ec050bfc34cc1931027283b5a7f607fb6a67b503876
+
 # 获取终端宽度
 TERM_WIDTH := $(shell tput cols)
 # 生成等宽的符号行
