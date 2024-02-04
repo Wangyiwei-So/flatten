@@ -22,6 +22,8 @@ ifeq "$(GOBIN)" ""
 	GOBIN=${GOPATH}/bin
 endif
 
+# renovate: datasource=golang-version depName=go
+GOVERSION := 1.21.0
 
 GOARCH ?= $(shell go env GOARCH)
 GOOS ?= $(shell go env GOOS)
