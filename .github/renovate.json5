@@ -49,13 +49,6 @@
   "separateMajorMinor": true,
   "separateMultipleMajor": true,
   "separateMinorPatch": true,
-  "pruneStaleBranches": true,
-  "baseBranches": [
-    "main",
-    "v1.14",
-    "v1.13",
-    "v1.12"
-  ],
   "vulnerabilityAlerts": {
     "enabled": true
   },
@@ -115,9 +108,6 @@
         "patch",
         "pin",
         "pinDigest"
-      ],
-      matchBaseBranches: [
-        "main"
       ]
     },
     {
@@ -134,60 +124,6 @@
       ],
       "matchUpdateTypes": [
         "patch"
-      ],
-      matchBaseBranches: [
-        "main",
-        "v1.14",
-        "v1.13",
-        "v1.12"
-      ]
-    },
-    {
-      // Do not allow any updates into stable branches.
-      "enabled": false,
-      "groupName": "all go dependencies stable",
-      "groupSlug": "all-go-deps-stable",
-      "matchFiles": [
-        "go.mod",
-        "go.sum"
-      ],
-      matchBaseBranches: [
-        "v1.14",
-        "v1.13",
-        "v1.12"
-      ]
-    },
-    {
-      "enabled": false,
-      "matchPackageNames": [
-        // All of these packages are maintained on a Cilium fork. Thus, we don't
-        // want to update them automatically.
-        "go.universe.tf/metallb",
-        "github.com/cilium/metallb",
-        // metallb is still using an old version of "github.com/mdlayher/arp"
-        "github.com/mdlayher/arp",
-        "github.com/miekg/dns",
-        "github.com/cilium/dns",
-        "sigs.k8s.io/controller-tools",
-        "github.com/cilium/controller-tools",
-        "github.com/cilium/client-go",
-        // We update this dependency manually together with envoy proxy updates
-        "github.com/cilium/proxy"
-      ],
-      "matchPackagePatterns": [
-        // We can't update these libraries until github.com/shoenig/go-m1cpu
-        // is added as an exception to the list of licenses into CNCF.
-        ".*google/gops/*",
-        // We can't update these libraries until github.com/shoenig/go-m1cpu
-        // is added as an exception to the list of licenses into CNCF.
-        "github.com/shirou/gopsutil/*",
-        // Once we decide to spend cycles on ginkgo v2 we should update the
-        // dependency manually.
-        "github.com/onsi/ginkgo",
-        "github.com/onsi/gomega/*",
-        // k8s dependencies will be updated manually along with tests
-        "k8s.io/*",
-        "sigs.k8s.io/*"
       ]
     },
     {
@@ -233,9 +169,6 @@
         "ghcr.io/spiffe/spire-agent",
         "ghcr.io/spiffe/spire-server"
       ],
-      "matchBaseBranches": [
-        "main"
-      ],
       "allowedVersions": ">1.6"
     },
     {
@@ -247,9 +180,6 @@
         "ghcr.io/spiffe/spire-agent",
         "ghcr.io/spiffe/spire-server"
       ],
-      "matchBaseBranches": [
-        "v1.14"
-      ],
       "allowedVersions": "<1.7"
     },
     {
@@ -257,20 +187,12 @@
         "docker.io/library/ubuntu"
       ],
       "allowedVersions": "22.04",
-      "matchBaseBranches": [
-        "main",
-        "v1.14",
-        "v1.13"
-      ],
     },
     {
       "matchPackageNames": [
         "docker.io/library/ubuntu"
       ],
       "allowedVersions": "20.04",
-      "matchBaseBranches": [
-        "v1.12"
-      ],
     },
     {
       "matchPackageNames": [
@@ -286,57 +208,39 @@
         "docker.io/library/golang",
         "go"
       ],
-      "allowedVersions": "<1.21",
-      "matchBaseBranches": [
-        "v1.14"
-      ]
+      "allowedVersions": "<1.21"
     },
     {
       "matchPackageNames": [
         "docker.io/library/golang",
         "go"
       ],
-      "allowedVersions": "<1.21",
-      "matchBaseBranches": [
-        "v1.13"
-      ]
+      "allowedVersions": "<1.21"
     },
     {
       "matchPackageNames": [
         "docker.io/library/golang",
         "go"
       ],
-      "allowedVersions": "<1.21",
-      "matchBaseBranches": [
-        "v1.12"
-      ]
+      "allowedVersions": "<1.21"
     },
     {
       "matchPackageNames": [
         "docker.io/library/alpine"
       ],
-      "allowedVersions": "<3.19",
-      "matchBaseBranches": [
-        "v1.14"
-      ]
+      "allowedVersions": "<3.19"
     },
     {
       "matchPackageNames": [
         "docker.io/library/alpine"
       ],
-      "allowedVersions": "<3.18",
-      "matchBaseBranches": [
-        "v1.13"
-      ]
+      "allowedVersions": "<3.18"
     },
     {
       "matchPackageNames": [
         "docker.io/library/alpine"
       ],
-      "allowedVersions": "<3.17",
-      "matchBaseBranches": [
-        "v1.12"
-      ]
+      "allowedVersions": "<3.17"
     },
     {
       "matchDepNames": [
@@ -350,10 +254,6 @@
       "groupSlug": "cilium-cli",
       "matchDepNames": [
         "cilium/cilium-cli"
-      ],
-      "matchBaseBranches": [
-        "main",
-        "v1.14"
       ]
     },
     {
@@ -362,12 +262,7 @@
       "matchDepNames": [
         "cilium/cilium-cli"
       ],
-      "allowedVersions": "/^v0\\.14\\.[0-9]+$/",
-      "matchBaseBranches": [
-        "v1.13",
-        "v1.12",
-        "v1.11"
-      ]
+      "allowedVersions": "/^v0\\.14\\.[0-9]+$/"
     },
     {
       "groupName": "Hubble CLI",
@@ -390,18 +285,6 @@
       "groupName": "golangci-lint",
       "matchDepNames": [
         "golangci/golangci-lint"
-      ]
-    },
-    {
-      // Do not allow any updates into stable branches.
-      "enabled": false,
-      "matchDepNames": [
-        "golangci/golangci-lint"
-      ],
-      "matchBaseBranches": [
-        "v1.14",
-        "v1.13",
-        "v1.12"
       ]
     },
     {
