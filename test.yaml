@@ -1,0 +1,2 @@
+# renovate: datasource=golang-version depName=go
+GOLANGCILINT_WANT_VERSION = v1.52.1
