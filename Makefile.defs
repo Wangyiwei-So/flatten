@@ -49,7 +49,7 @@ SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(RO
 
 # renovate: datasource=docker depName=golangci/golangci-lint
 GOLANGCILINT_WANT_VERSION = v1.54.1
-GOLANGCILINT_IMAGE_SHA = sha256:e699df940be1810b08ba6ec050bfc34cc1931027283b5a7f607fb6a67b503876
+GOLANGCILINT_IMAGE_SHA = sha256:asdasdasdasd
 
 # 获取终端宽度
 TERM_WIDTH := $(shell tput cols)
