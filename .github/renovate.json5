@@ -34,8 +34,7 @@
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+_VERSION = (?<currentValue>.*)\\s+.+_SHA = (?<currentDigest>sha256:[a-f0-9]+)"
-      ],
-      "ignoreDeps": []
+      ]
     },
     {
       "fileMatch": [
@@ -43,8 +42,7 @@
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+go: \"(?<currentValue>.*)\""
-      ],
-      "ignoreDeps": []
+      ]
     }
   ]
 }
