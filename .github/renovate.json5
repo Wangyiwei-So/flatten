@@ -22,7 +22,8 @@
     {
       "groupName": "Go",
       "matchDepNames": [
-        "go"
+        "go",
+        "docker.io/library/golang"
       ]
     }
   ],
@@ -33,15 +34,17 @@
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+_VERSION = (?<currentValue>.*)\\s+.+_SHA = (?<currentDigest>sha256:[a-f0-9]+)"
-      ]
+      ],
+      "ignoreDeps": []
     },
     {
       "fileMatch": [
-        "^test\\.yaml"
+        "^test\\.yaml$"
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+go: \"(?<currentValue>.*)\""
-      ]
+      ],
+      "ignoreDeps": []
     }
   ]
 }
