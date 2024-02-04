@@ -18,6 +18,13 @@
       "matchDepNames": [
         "golangci/golangci-lint"
       ]
+    },
+    {
+      "groupName": "Go",
+      "matchDepNames": [
+        "go",
+        "docker.io/library/golang"
+      ]
     }
   ],
   "regexManagers": [
