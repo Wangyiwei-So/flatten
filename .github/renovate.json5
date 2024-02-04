@@ -18,13 +18,6 @@
       "matchDepNames": [
         "golangci/golangci-lint"
       ]
-    },
-    {
-      "groupName": "Go",
-      "matchDepNames": [
-        "go",
-        "docker.io/library/golang"
-      ]
     }
   ],
   "regexManagers": [
@@ -41,7 +34,8 @@
         "^test\\.yaml$"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+go: \"(?<currentValue>.*)\""
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+go: \"(?<currentValue>.*)\"",
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+go_a: \"(?<currentValue>.*)\""
       ]
     }
   ]
