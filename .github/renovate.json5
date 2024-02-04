@@ -22,7 +22,8 @@
     {
       "enabled": "false",
       "matchFiles": [
-        "aa.yaml"
+        "go.mod",
+        "test.yaml"
       ],
       "matchDepNames": [
         "go"
