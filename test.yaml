@@ -1,3 +1,0 @@
-# renovate: datasource=docker depName=golangci/golangci-lint
-GOLANGCILINT_WANT_VERSION = v1.52.1
-GOLANGCILINT_IMAGE_SHA = sha256:asdasdasdsad
