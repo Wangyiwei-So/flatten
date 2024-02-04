@@ -18,6 +18,15 @@
       "matchDepNames": [
         "golangci/golangci-lint"
       ]
+    },
+    {
+      "enabled": "false",
+      "matchFiles": [
+        "test.yaml"
+      ],
+      "matchDepNames": [
+        "go"
+      ]
     }
   ],
   "regexManagers": [
