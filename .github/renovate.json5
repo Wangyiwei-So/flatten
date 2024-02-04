@@ -5,35 +5,25 @@
     ":gitSignOff",
     "helpers:pinGitHubActionDigests"
   ],
-  // This ensures that the gitAuthor and gitSignOff fields match
-  "gitAuthor": "renovate[bot] <bot@renovateapp.com>",
   "includePaths": [
-    ".github/actions/ginkgo/**",
-    ".github/actions/set-env-variables/action.yml",
-    ".github/workflows/**",
-    ".github/kind-config.yaml",
-    ".github/kind-config-ipv6.yaml",
-    "images/**",
-    "examples/hubble/*",
-    "go.mod",
-    "go.sum",
     "Makefile.defs",
-    ".travis.yml",
-    "test/kubernetes-test.sh",
-    "test/packet/scripts/install.sh",
-    "install/kubernetes/cilium/templates/spire/**",
-    "install/kubernetes/cilium/values.yaml.tmpl",
+    "test.yaml"
   ],
   "separateMajorMinor": true,
   "separateMultipleMajor": true,
   "separateMinorPatch": true,
   "packageRules": [
     {
-      // Group golangci-lint updates to overrule grouping of version updates in the GHA files.
-      // Without this, golangci-lint updates are not in sync for GHA files and other usages.
       "groupName": "golangci-lint",
       "matchDepNames": [
         "golangci/golangci-lint"
+      ]
+    },
+    {
+      "groupName": "Go",
+      "matchDepNames": [
+        "go",
+        "docker.io/library/golang"
       ]
     }
   ],
@@ -42,11 +32,16 @@
       "fileMatch": [
         "^Makefile\\.defs$"
       ],
-      // This regex manages version strings in the Makefile.defs file,
-      // similar to the examples shown here:
-      //   https://docs.renovatebot.com/modules/manager/regex/#advanced-capture
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+_VERSION = (?<currentValue>.*)\\s+.+_SHA = (?<currentDigest>sha256:[a-f0-9]+)"
+      ]
+    },
+    {
+      "fileMatch": [
+        "^test\\.yaml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+_VERSION = (?<currentValue>.*)"
       ]
     }
   ]
