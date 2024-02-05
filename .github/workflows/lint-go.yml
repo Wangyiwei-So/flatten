@@ -1,0 +1,62 @@
+name: Go Related Checks
+
+# Any change in triggers needs to be reflected in the concurrency group.
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+      - ft/main/**
+  # Add this workflow to be triggered by merge queue events
+  merge_group:
+
+permissions: read-all
+
+# 用于并发管理
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.after || github.event.merge_group && github.run_id }} #将工作流分组
+  cancel-in-progress: ${{ !github.event.merge_group }} #如果不是merge_group则会取消
+
+jobs:
+  go-mod:
+  name: Check Go Modules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        with:
+          # renovate: datasource=golang-version depName=go
+          go-version: 1.21.0
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          persist-credentials: false
+      - name: Check module vendoring
+        run: |
+          cd go
+          go mod tidy
+  #go mod vendor
+  #test -z "$(git status --porcelain)" || (echo "please run 'go mod tidy && go mod vendor', and submit your changes"; exit 1)
+  golangci:
+    name: Lint Source Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        with:
+          # renovate: datasource=golang-version depName=go
+          go-version: 1.21.0
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          persist-credentials: false
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc # v3.7.0
+        with:
+          # renovate: datasource=docker depName=golangci/golangci-lint
+          version: v1.55.0
+          skip-cache: true
+          args: "--out-${NO_FUTURE}format colored-line-number --verbose" #--modules-download-mode=vendor
+  precheck:
+  generate-api:
+  generate-k8s-api:
