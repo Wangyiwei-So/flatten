@@ -1,5 +1,3 @@
-VARS_OLD := $(.VARIABLES) #存Makefile提供的变量，用于过滤
-
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
 
@@ -51,6 +49,12 @@ SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(RO
 GOLANGCILINT_WANT_VERSION = v1.55.2
 GOLANGCILINT_IMAGE_SHA = sha256:e699df940be1810b08ba6ec050bfc34cc1931027283b5a7f607fb6a67b503876
 GOLANGCILINT_VERSION = $(shell golangci-lint version --format short 2>/dev/null)
+
+VERSION = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION)
+VERSION_MAJOR = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d. -f1)
+VERSION_MINOR = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d. -f2)
+VERSION_PATCH = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d. -f3)
+VERSION_IDENTIFIER = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d - -f2)
 
 ##@ GoLint
 golangci-lint: make_sure_go_workdir ## Run golangci-lint
