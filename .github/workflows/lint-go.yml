@@ -56,7 +56,7 @@ jobs:
           version: v1.55.0
           skip-cache: true
           args: "--out-${NO_FUTURE}format colored-line-number --verbose" #--modules-download-mode=vendor
-          working-directory: go
+          # working-directory: go
   # precheck:
   # generate-api:
   # generate-k8s-api:
