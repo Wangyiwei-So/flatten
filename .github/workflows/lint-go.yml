@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   go-mod:
-  name: Check Go Modules
+    name: Check Go Modules
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
@@ -57,6 +57,7 @@ jobs:
           version: v1.55.0
           skip-cache: true
           args: "--out-${NO_FUTURE}format colored-line-number --verbose" #--modules-download-mode=vendor
-  precheck:
-  generate-api:
-  generate-k8s-api:
+          working-directory: go
+  # precheck:
+  # generate-api:
+  # generate-k8s-api:
