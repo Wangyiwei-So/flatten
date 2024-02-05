@@ -48,8 +48,24 @@ SWAGGER_VERSION := v0.30.3
 SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(ROOT_DIR):$(ROOT_DIR) -w $(ROOT_DIR) --entrypoint swagger quay.io/goswagger/swagger:$(SWAGGER_VERSION)
 
 # renovate: datasource=docker depName=golangci/golangci-lint
-GOLANGCILINT_WANT_VERSION = v1.52.2
-GOLANGCILINT_IMAGE_SHA = sha256:3d2f4240905054c7efa7f4e98ba145c12a16995bbc3e605300e21400a1665cb6sdasdasdsad
+GOLANGCILINT_WANT_VERSION = v1.55.2
+GOLANGCILINT_IMAGE_SHA = sha256:e699df940be1810b08ba6ec050bfc34cc1931027283b5a7f607fb6a67b503876
+GOLANGCILINT_VERSION = $(shell golangci-lint version --format short 2>/dev/null)
+
+##@ GoLint
+golangci-lint: make_sure_go_workdir ## Run golangci-lint
+ifneq (,$(findstring $(GOLANGCILINT_WANT_VERSION:v%=%),$(GOLANGCILINT_VERSION)))
+	golangci-lint run $(GOLANGCI_LINT_ARGS)
+else
+	$(CONTAINER_ENGINE) run --rm -v `pwd`:/app -w /app docker.io/golangci/golangci-lint:$(GOLANGCILINT_WANT_VERSION)@$(GOLANGCILINT_IMAGE_SHA) golangci-lint run $(GOLANGCI_LINT_ARGS)
+endif
+
+golangci-lint-fix: make_sure_go_workdir ## Run golangci-lint to automatically fix warnings
+	$(QUIET)$(MAKE) golangci-lint GOLANGCI_LINT_ARGS="--fix"
+
+lint: golangci-lint
+
+lint-fix: golangci-lint-fix
 
 # 获取终端宽度
 TERM_WIDTH := $(shell tput cols)
@@ -65,3 +81,5 @@ endef
 define print_help_from_makefile
   @awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z0-9][a-zA-Z0-9 _-]*:.*?##/ { split($$1, targets, " "); for (i in targets) { printf "  \033[36m%-28s\033[0m %s\n", targets[i], $$2 } } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 endef
+
+make_sure_go_workdir:

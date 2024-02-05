@@ -7,7 +7,8 @@
   ],
   "includePaths": [
     "Makefile.defs",
-    "test.yaml"
+    "test.yaml",
+    ".github/workflows/**"
   ],
   "separateMajorMinor": true,
   "separateMultipleMajor": true,
@@ -20,13 +21,10 @@
       ]
     },
     {
-      "enabled": "false",
-      "matchFiles": [
-        "go.mod",
-        "test.yaml"
-      ],
+      "groupName": "Go",
       "matchDepNames": [
-        "go"
+        "go",
+        "docker.io/library/golang"
       ]
     }
   ],
@@ -50,15 +48,12 @@
     },
     {
       "fileMatch": [
-        "^\\.github/workflows/[^/]+\\.ya?ml$"
+        "^\\.github/workflows/[^/]+\\.ya?ml$",
+        "^\\.github/workflows/lint-go\\.yml$"
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+version: (?<currentValue>.*)",
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+_VERSION: (?<currentValue>.*)",
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+kernel: '(?<currentValue>.*)'",
-        '# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*)\\s+.+kernel: "(?<currentValue>.*)@(?<currentDigest>sha256:[a-f0-9]+)"',
-        '# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*)\\s+.+image-version: "(?<currentValue>.*)@(?<currentDigest>sha256:[a-f0-9]+)"',
-        '# renovate: datasource=(?<datasource>.*?)\\s+.+kube-image: "(?<depName>.*):(?<currentValue>.*)@(?<currentDigest>sha256:[a-f0-9]+)"'
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+_VERSION: (?<currentValue>.*)"
       ]
     }
   ]
