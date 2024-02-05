@@ -1,10 +1,26 @@
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
 
+# 根文件目录
 ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+# 相对路径
 RELATIVE_DIR := $(shell echo $(realpath .) | sed "s;$(ROOT_DIR)[/]*;;")
 
-#  go语言相关
+# 版本号
+VERSION = $(shell cat $(ROOT_DIR)/VERSION)
+# 主版本号
+VERSION_MAJOR = $(shell cat $(ROOT_DIR)/VERSION | cut -d. -f1)
+# 次版本号
+VERSION_MINOR = $(shell cat $(ROOT_DIR)/VERSION | cut -d. -f2)
+# 补丁版本号
+VERSION_PATCH = $(shell cat $(ROOT_DIR)/VERSION | cut -d. -f3 | cut -d - -f1)
+# 版本说明
+VERSION_IDENTIFIER = $(shell cat $(ROOT_DIR)/VERSION | cut -d - -f2)
+
+## Go语言相关
+# Go版本确保最新
+# renovate: datasource=golang-version depName=go
+GO_VERSION := 1.21.0
 GOPATH ?= $(shell go env GOPATH)
 GOROOT ?= $(shell go env GOROOT)
 GOBIN ?= $(shell go env GOBIN)
@@ -12,19 +28,15 @@ GO_BUILD_FLAGS =
 GO_TEST_FLAGS =
 GO_CLEAN_FLAGS =
 GO_BUILD_LDFLAGS =
+GOARCH ?= $(shell go env GOARCH)
+GOOS ?= $(shell go env GOOS)
+# GOPATH必须存在
 ifeq "$(GOPATH)" ""
   #$(error Please set the environment variable GOPATH before running `make`)
 endif
-
 ifeq "$(GOBIN)" ""
 	GOBIN=${GOPATH}/bin
 endif
-
-# renovate: datasource=golang-version depName=go
-GOVERSION := 1.21.0
-
-GOARCH ?= $(shell go env GOARCH)
-GOOS ?= $(shell go env GOOS)
 
 #  安装工具
 INSTALL = install
@@ -50,11 +62,73 @@ GOLANGCILINT_WANT_VERSION = v1.55.2
 GOLANGCILINT_IMAGE_SHA = sha256:e699df940be1810b08ba6ec050bfc34cc1931027283b5a7f607fb6a67b503876
 GOLANGCILINT_VERSION = $(shell golangci-lint version --format short 2>/dev/null)
 
-VERSION = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION)
-VERSION_MAJOR = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d. -f1)
-VERSION_MINOR = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d. -f2)
-VERSION_PATCH = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d. -f3)
-VERSION_IDENTIFIER = $(shell cat $(dir $(lastword $(MAKEFILE_LIST)))/VERSION | cut -d - -f2)
+GIT_VERSION = $(shell git show -s --format='format:%h %aI')
+
+CODE_VERSION_DIR = /pkg/version.flattenVersion
+FULL_BUILD_VERSION = $(VERSION) $(GIT_VERSION)
+ROOT_GO_MODULE = $(shell go list -m)
+GO_BUILD_LDFLAGS += -X "$(ROOT_GO_MODULE)$(CODE_VERSION_DIR)=$(FULL_BUILD_VERSION)"
+ifeq ($(NOSTRIP),)
+    # Note: these options will not remove annotations needed for stack
+    # traces, so panic backtraces will still be readable.
+    #
+    # -w: Omit the DWARF symbol table.
+    # -s: Omit the symbol table and debug information.
+    GO_BUILD_LDFLAGS += -s -w
+endif
+GO_TEST_FLAGS += -vet=all
+ifneq ($(GO_MOD_VENDOR),)
+    GO_BUILD_FLAGS += -mod=vendor
+GO_TEST_FLAGS += -mod=vendor -vet=all
+GO_CLEAN_FLAGS += -mod=vendor
+endif
+GO_BUILD = CGO_ENABLED=0 go build
+# Support CGO cross-compiling for amd64 and arm64 targets
+CGO_CC =
+CROSS_ARCH =
+ifneq ($(GOARCH),$(NATIVE_ARCH))
+    CROSS_ARCH = $(GOARCH)
+endif
+ifeq ($(CROSS_ARCH),arm64)
+    CGO_CC = CC=aarch64-linux-gnu-gcc
+else ifeq ($(CROSS_ARCH),amd64)
+    CGO_CC = CC=x86_64-linux-gnu-gcc
+endif
+GO_BUILD_WITH_CGO = CGO_ENABLED=1 $(CGO_CC) go build
+ifneq ($(RACE),)
+    GO_BUILD_FLAGS += -race
+    GO_TEST_FLAGS += -race
+    GOTEST_COVER_OPTS += -covermode=atomic
+
+    # GO_BUILD becomes GO_BUILD_WITH_CGO as `-race` requires CGO
+    GO_BUILD = $(GO_BUILD_WITH_CGO)
+    ifeq ($(LOCKDEBUG),)
+        LOCKDEBUG=1
+    endif
+else
+    GOTEST_COVER_OPTS += -covermode=count
+endif
+
+ifneq ($(LOCKDEBUG),)
+    GO_TAGS_FLAGS += lockdebug
+endif
+
+GO_BUILD_FLAGS += -ldflags '$(GO_BUILD_LDFLAGS) $(EXTRA_GO_BUILD_LDFLAGS)' -tags=$(call join-with-comma,$(GO_TAGS_FLAGS)) $(EXTRA_GO_BUILD_FLAGS)
+GO_TEST_FLAGS += -tags=$(call join-with-comma,$(GO_TAGS_FLAGS))
+
+ifeq ($(NOOPT),1)
+    GO_BUILD_FLAGS += -gcflags="all=-N -l"
+endif
+
+GO_BUILD += $(GO_BUILD_FLAGS)
+GO_BUILD_WITH_CGO += $(GO_BUILD_FLAGS)
+
+GO_TEST = CGO_ENABLED=0 go test $(GO_TEST_FLAGS)
+GO_CLEAN = go clean $(GO_CLEAN_FLAGS)
+
+GO_VET = go vet
+GO_LIST = go list
+
 
 ##@ GoLint
 golangci-lint: make_sure_go_workdir ## Run golangci-lint

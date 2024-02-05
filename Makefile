@@ -15,3 +15,7 @@ print_all_variables: ## print all makefile variables
 .PHONY: help
 help: ##print help
 	$(call print_help_from_makefile)
+GIT_VERSION: FORCE
+	@if [ "$(GIT_VERSION)" != "`cat 2>/dev/null GIT_VERSION`" ] ; then echo "$(GIT_VERSION)" >GIT_VERSION; fi
+.PHONY: FORCE
+FORCE:
