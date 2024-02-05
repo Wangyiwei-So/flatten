@@ -1,3 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Authors: Wangyiwei<173549182@qq.com> of Flatten
+
+# params: 
+#@ export $CODE_VERSION_DIR=xxx 覆盖默认version.go位置
+#@ export NOSTRIP=1 开启debug模式
+#@ export GO_MOD_VENDOR=1 使用vendor模式
+
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
 
@@ -16,20 +24,44 @@ VERSION_MINOR = $(shell cat $(ROOT_DIR)/VERSION | cut -d. -f2)
 VERSION_PATCH = $(shell cat $(ROOT_DIR)/VERSION | cut -d. -f3 | cut -d - -f1)
 # 版本说明
 VERSION_IDENTIFIER = $(shell cat $(ROOT_DIR)/VERSION | cut -d - -f2)
+# git版本号
+GIT_VERSION = $(shell git show -s --format='format:%h %aI')
+# 版本号+git版本号
+FULL_BUILD_VERSION = $(VERSION) $(GIT_VERSION)
 
-## Go语言相关
+## 工具相关 ##
+INSTALL = install
+CONTAINER_ENGINE?=docker
+GO = go
+export KUBECTL ?= kubectl
+# use gsed if available, otherwise use sed.
+# gsed is needed for MacOS to make in-place replacement work correctly.
+SED ?= $(if $(shell command -v gsed),gsed,sed)
+DOCKER_FLAGS?=
+DOCKER_BUILD_FLAGS?=
+# 终端宽度
+TERM_WIDTH := $(shell tput cols)
+
+## Go语言相关 ##
+
 # Go版本确保最新
 # renovate: datasource=golang-version depName=go
 GO_VERSION := 1.21.0
-GOPATH ?= $(shell go env GOPATH)
-GOROOT ?= $(shell go env GOROOT)
-GOBIN ?= $(shell go env GOBIN)
+GOPATH ?= $(shell $(GO) env GOPATH)
+GOROOT ?= $(shell $(GO) env GOROOT)
+GOBIN ?= $(shell $(GO) env GOBIN)
+GOARCH ?= $(shell $(GO) env GOARCH)
+GOOS ?= $(shell $(GO) env GOOS)
+# Go包名
+ROOT_GO_MODULE = $(shell $(GO) list -m)
+# 该字段将会拼接在go build命令后
 GO_BUILD_FLAGS =
+# 该字段将会拼接在go test命令后
 GO_TEST_FLAGS =
+# 该字段将会拼接在go clean命令后
 GO_CLEAN_FLAGS =
+# 该字段将会凭借在GO_BUILD_FLAGS变量之后
 GO_BUILD_LDFLAGS =
-GOARCH ?= $(shell go env GOARCH)
-GOOS ?= $(shell go env GOOS)
 # GOPATH必须存在
 ifeq "$(GOPATH)" ""
   #$(error Please set the environment variable GOPATH before running `make`)
@@ -37,37 +69,10 @@ endif
 ifeq "$(GOBIN)" ""
 	GOBIN=${GOPATH}/bin
 endif
-
-#  安装工具
-INSTALL = install
-
-CONTAINER_ENGINE?=docker
-DOCKER_FLAGS?=
-DOCKER_BUILD_FLAGS?=
-
-# use gsed if available, otherwise use sed.
-# gsed is needed for MacOS to make in-place replacement work correctly.
-SED ?= $(if $(shell command -v gsed),gsed,sed)
-
-DOCKER_IMAGE_TAG?=latest
-
-export KUBECTL ?= kubectl
-
-#  swagger
-SWAGGER_VERSION := v0.30.3
-SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(ROOT_DIR):$(ROOT_DIR) -w $(ROOT_DIR) --entrypoint swagger quay.io/goswagger/swagger:$(SWAGGER_VERSION)
-
-# renovate: datasource=docker depName=golangci/golangci-lint
-GOLANGCILINT_WANT_VERSION = v1.55.2
-GOLANGCILINT_IMAGE_SHA = sha256:e699df940be1810b08ba6ec050bfc34cc1931027283b5a7f607fb6a67b503876
-GOLANGCILINT_VERSION = $(shell golangci-lint version --format short 2>/dev/null)
-
-GIT_VERSION = $(shell git show -s --format='format:%h %aI')
-
-CODE_VERSION_DIR = /pkg/version.flattenVersion
-FULL_BUILD_VERSION = $(VERSION) $(GIT_VERSION)
-ROOT_GO_MODULE = $(shell go list -m)
+# 指定version.go的包路径和变量名，用于在go build时将FULL_BUILD_VERSION注入
+CODE_VERSION_DIR ?= /pkg/version.Version
 GO_BUILD_LDFLAGS += -X "$(ROOT_GO_MODULE)$(CODE_VERSION_DIR)=$(FULL_BUILD_VERSION)"
+
 ifeq ($(NOSTRIP),)
     # Note: these options will not remove annotations needed for stack
     # traces, so panic backtraces will still be readable.
@@ -82,7 +87,7 @@ ifneq ($(GO_MOD_VENDOR),)
 GO_TEST_FLAGS += -mod=vendor -vet=all
 GO_CLEAN_FLAGS += -mod=vendor
 endif
-GO_BUILD = CGO_ENABLED=0 go build
+GO_BUILD = CGO_ENABLED=0 $(GO) build
 # Support CGO cross-compiling for amd64 and arm64 targets
 CGO_CC =
 CROSS_ARCH =
@@ -94,7 +99,7 @@ ifeq ($(CROSS_ARCH),arm64)
 else ifeq ($(CROSS_ARCH),amd64)
     CGO_CC = CC=x86_64-linux-gnu-gcc
 endif
-GO_BUILD_WITH_CGO = CGO_ENABLED=1 $(CGO_CC) go build
+GO_BUILD_WITH_CGO = CGO_ENABLED=1 $(CGO_CC) $(GO) build
 ifneq ($(RACE),)
     GO_BUILD_FLAGS += -race
     GO_TEST_FLAGS += -race
@@ -113,23 +118,14 @@ ifneq ($(LOCKDEBUG),)
     GO_TAGS_FLAGS += lockdebug
 endif
 
-GO_BUILD_FLAGS += -ldflags '$(GO_BUILD_LDFLAGS) $(EXTRA_GO_BUILD_LDFLAGS)' -tags=$(call join-with-comma,$(GO_TAGS_FLAGS)) $(EXTRA_GO_BUILD_FLAGS)
-GO_TEST_FLAGS += -tags=$(call join-with-comma,$(GO_TAGS_FLAGS))
+## golangci-lint相关 ##
 
-ifeq ($(NOOPT),1)
-    GO_BUILD_FLAGS += -gcflags="all=-N -l"
-endif
-
-GO_BUILD += $(GO_BUILD_FLAGS)
-GO_BUILD_WITH_CGO += $(GO_BUILD_FLAGS)
-
-GO_TEST = CGO_ENABLED=0 go test $(GO_TEST_FLAGS)
-GO_CLEAN = go clean $(GO_CLEAN_FLAGS)
-
-GO_VET = go vet
-GO_LIST = go list
-
-
+# golangci-lint工具版本，保持最新
+# renovate: datasource=docker depName=golangci/golangci-lint
+GOLANGCILINT_WANT_VERSION = v1.55.2
+GOLANGCILINT_IMAGE_SHA = sha256:e699df940be1810b08ba6ec050bfc34cc1931027283b5a7f607fb6a67b503876
+# 本地golangci-lint工具版本
+GOLANGCILINT_VERSION = $(shell golangci-lint version --format short 2>/dev/null)
 ##@ GoLint
 golangci-lint: make_sure_go_workdir ## Run golangci-lint
 ifneq (,$(findstring $(GOLANGCILINT_WANT_VERSION:v%=%),$(GOLANGCILINT_VERSION)))
@@ -145,19 +141,67 @@ lint: golangci-lint
 
 lint-fix: golangci-lint-fix
 
-# 获取终端宽度
-TERM_WIDTH := $(shell tput cols)
+DOCKER_IMAGE_TAG?=latest
+
+# swagger
+SWAGGER_VERSION := v0.30.3
+SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(ROOT_DIR):$(ROOT_DIR) -w $(ROOT_DIR) --entrypoint swagger quay.io/goswagger/swagger:$(SWAGGER_VERSION)
+
+GO_BUILD_FLAGS += -ldflags '$(GO_BUILD_LDFLAGS) $(EXTRA_GO_BUILD_LDFLAGS)' -tags=$(call join-with-comma,$(GO_TAGS_FLAGS)) $(EXTRA_GO_BUILD_FLAGS)
+GO_TEST_FLAGS += -tags=$(call join-with-comma,$(GO_TAGS_FLAGS))
+
+ifeq ($(NOOPT),1)
+    GO_BUILD_FLAGS += -gcflags="all=-N -l"
+endif
+
+GO_BUILD += $(GO_BUILD_FLAGS)
+GO_BUILD_WITH_CGO += $(GO_BUILD_FLAGS)
+
+GO_TEST = CGO_ENABLED=0 $(GO) test $(GO_TEST_FLAGS)
+GO_CLEAN = $(GO) clean $(GO_CLEAN_FLAGS)
+
+GO_VET = $(GO) vet
+GO_LIST = $(GO) list
+
 # 生成等宽的符号行
 define print_line
 	@echo $(shell printf '$(1)%.0s' $$(seq 1 $(TERM_WIDTH)))
+endef
+
+# 生成等宽的符号行，$info方式
+define print_line_info
+	$(info $(shell printf '$(1)%.0s' $$(seq 1 $(TERM_WIDTH))))
 endef
 
 define print_help_line
   @printf "  \033[36m%-29s\033[0m %s.\n" $(1) $(2)
 endef
 
+# 扫描所有的Makefile文件，并提取一些目标的注释生成help并打印
+# 分类的格式: ##@
+# 目标的格式: ##
+# 使用时可以增加一个target，下面是一个示例
+# .PHONY: help
+# help: FORCE ##print help
+#	$(call print_help_from_makefile)
+# .PHONY: FORCE
+# FORCE: 
+# 	@true
 define print_help_from_makefile
   @awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z0-9][a-zA-Z0-9 _-]*:.*?##/ { split($$1, targets, " "); for (i in targets) { printf "  \033[36m%-28s\033[0m %s\n", targets[i], $$2 } } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 endef
 
-make_sure_go_workdir:
+# 扫描所有的Makefile文件，并提取这样的注释作为参数显示 `#@一些说明`
+# 使用时可以增加一个target，下面是一个示例
+# .PHONY: params
+# params: FORCE
+# 	$(call print_params_from_makefile)
+# .PHONY: FORCE
+# FORCE: 
+# 	@true
+define print_params_from_makefile
+    $(foreach v, $(MAKEFILE_LIST), \
+        $(info $(shell printf "\033[36m$(v): \033[0m")) \
+        $(info $(shell awk '/^#@/ {print substr($$0, 4)}' $(v))) \
+    )
+endef

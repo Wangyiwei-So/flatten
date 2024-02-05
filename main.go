@@ -5,9 +5,10 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+
+	"github.com/Wangyiwei-So/flatten/pkg/version"
 )
 
 func main() {
-	fmt.Println(strconv.Atoi("123"))
+	fmt.Println(version.GetVersion())
 }
