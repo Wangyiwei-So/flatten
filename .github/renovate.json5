@@ -48,8 +48,7 @@
     },
     {
       "fileMatch": [
-        "^\\.github/workflows/[^/]+\\.ya?ml$",
-        "^\\.github/workflows/lint-go\\.yml$"
+        "^\\.github/workflows/.*y[a]?ml$"
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+version: (?<currentValue>.*)",
