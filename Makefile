@@ -3,11 +3,22 @@ TARGET = flatten
 ##@ Default
 all: $(TARGET)
 	@echo "Build finished"
+all: export CODE_VERSION_DIR:=/pkg/version.flattenVersion
 
--include Makefile.defs
+debug: export NOSTRIP=1
+debug: export NOOPT=1
+debug: export RACE=1
+debug: all
+
+##@ Build, Install and Test
+include Makefile.defs
 
 $(TARGET):
+	$(call ensure_go_flags)
 	$(GO_BUILD) -o $@
+
+test:
+	$(GO_TEST) | $(GOTEST_FORMATTER)
 
 ##@ Help
 .PHONY: print_all_variables

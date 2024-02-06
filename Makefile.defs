@@ -2,8 +2,10 @@
 # Copyright Authors: Wangyiwei<173549182@qq.com> of Flatten
 
 # params: 
-#@ export $CODE_VERSION_DIR=xxx 覆盖默认version.go位置
-#@ export NOSTRIP=1 开启debug模式
+#@ export CODE_VERSION_DIR=xxx 覆盖默认version.go位置
+#@ export NOSTRIP=1 开启编译符号表和调试信息，用于debug
+#@ export NOOPT=1 禁用优化，禁用函数内联，用于debug
+#@ export RACE=1 开启数据竞争检测，用于debug
 #@ export GO_MOD_VENDOR=1 使用vendor模式
 
 SHELL := /usr/bin/env bash
@@ -13,6 +15,16 @@ SHELL := /usr/bin/env bash
 ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 # 相对路径
 RELATIVE_DIR := $(shell echo $(realpath .) | sed "s;$(ROOT_DIR)[/]*;;")
+
+empty :=
+space := $(empty) $(empty)
+comma := ,
+join-with-comma = $(subst $(space),$(comma),$(strip $1))
+
+define newline
+
+
+endef
 
 # 版本号
 VERSION = $(shell cat $(ROOT_DIR)/VERSION)
@@ -29,16 +41,19 @@ GIT_VERSION = $(shell git show -s --format='format:%h %aI')
 # 版本号+git版本号
 FULL_BUILD_VERSION = $(VERSION) $(GIT_VERSION)
 
-## 工具相关 ##
 INSTALL = install
-CONTAINER_ENGINE?=docker
 GO = go
 export KUBECTL ?= kubectl
 # use gsed if available, otherwise use sed.
 # gsed is needed for MacOS to make in-place replacement work correctly.
 SED ?= $(if $(shell command -v gsed),gsed,sed)
-DOCKER_FLAGS?=
-DOCKER_BUILD_FLAGS?=
+
+## 容器相关 ##
+CONTAINER_ENGINE?=docker
+DOCKER_FLAGS ?=
+DOCKER_BUILD_FLAGS ?=
+DOCKER_IMAGE_TAG ?= latest
+
 # 终端宽度
 TERM_WIDTH := $(shell tput cols)
 
@@ -48,45 +63,55 @@ TERM_WIDTH := $(shell tput cols)
 # renovate: datasource=golang-version depName=go
 GO_VERSION := 1.21.0
 GOPATH ?= $(shell $(GO) env GOPATH)
-GOROOT ?= $(shell $(GO) env GOROOT)
-GOBIN ?= $(shell $(GO) env GOBIN)
-GOARCH ?= $(shell $(GO) env GOARCH)
-GOOS ?= $(shell $(GO) env GOOS)
-# Go包名
-ROOT_GO_MODULE = $(shell $(GO) list -m)
-# 该字段将会拼接在go build命令后
-GO_BUILD_FLAGS =
-# 该字段将会拼接在go test命令后
-GO_TEST_FLAGS =
-# 该字段将会拼接在go clean命令后
-GO_CLEAN_FLAGS =
-# 该字段将会凭借在GO_BUILD_FLAGS变量之后
-GO_BUILD_LDFLAGS =
-# GOPATH必须存在
 ifeq "$(GOPATH)" ""
   #$(error Please set the environment variable GOPATH before running `make`)
 endif
+GOROOT ?= $(shell $(GO) env GOROOT)
+GOBIN ?= $(shell $(GO) env GOBIN)
 ifeq "$(GOBIN)" ""
 	GOBIN=${GOPATH}/bin
 endif
+GOARCH ?= $(shell $(GO) env GOARCH)
+GOOS ?= $(shell $(GO) env GOOS)
+# 包名
+ROOT_GO_MODULE = $(shell $(GO) list -m)
+# go build的参数
+GO_BUILD_FLAGS =
+# go build控制编译链接的参数
+GO_BUILD_LDFLAGS =
+# go build的tags
+GO_TAGS_FLAGS = 
+
+# go test的参数
+GO_TEST_FLAGS = -vet=all
+# go test有关覆盖率的参数
+GOTEST_COVER_OPTS = -coverprofile=coverage.out
+# 要测试的包
+TESTPKGS ?= ./...
+
+# go clean的参数
+GO_CLEAN_FLAGS = 
+
 # 指定version.go的包路径和变量名，用于在go build时将FULL_BUILD_VERSION注入
 CODE_VERSION_DIR ?= /pkg/version.Version
 GO_BUILD_LDFLAGS += -X "$(ROOT_GO_MODULE)$(CODE_VERSION_DIR)=$(FULL_BUILD_VERSION)"
 
-ifeq ($(NOSTRIP),)
-    # Note: these options will not remove annotations needed for stack
-    # traces, so panic backtraces will still be readable.
-    #
-    # -w: Omit the DWARF symbol table.
-    # -s: Omit the symbol table and debug information.
-    GO_BUILD_LDFLAGS += -s -w
+# 处理go test覆盖率报告的输出
+# 默认情况直接打印，如果安装了tparse则用tparse输出
+# tparse是一个解析覆盖率报告的工具https://github.com/mfridman/tparse
+# usage: go test | $(GOTEST_FORMATTER)
+GOTEST_FORMATTER ?= cat
+ifneq ($(shell command -v tparse),)
+	GOTEST_COVER_OPTS += -json
+	GOTEST_FORMATTER = tparse
+else
+    @echo "建议安装https://github.com/mfridman/tparse"
+ifneq ($(V),0)
+	GOTEST_FORMATTER += -progress
 endif
-GO_TEST_FLAGS += -vet=all
-ifneq ($(GO_MOD_VENDOR),)
-    GO_BUILD_FLAGS += -mod=vendor
-GO_TEST_FLAGS += -mod=vendor -vet=all
-GO_CLEAN_FLAGS += -mod=vendor
 endif
+
+# 不带cgo的go build命令
 GO_BUILD = CGO_ENABLED=0 $(GO) build
 # Support CGO cross-compiling for amd64 and arm64 targets
 CGO_CC =
@@ -99,24 +124,37 @@ ifeq ($(CROSS_ARCH),arm64)
 else ifeq ($(CROSS_ARCH),amd64)
     CGO_CC = CC=x86_64-linux-gnu-gcc
 endif
+# 带cgo的go build命令
 GO_BUILD_WITH_CGO = CGO_ENABLED=1 $(CGO_CC) $(GO) build
-ifneq ($(RACE),)
-    GO_BUILD_FLAGS += -race
-    GO_TEST_FLAGS += -race
-    GOTEST_COVER_OPTS += -covermode=atomic
 
-    # GO_BUILD becomes GO_BUILD_WITH_CGO as `-race` requires CGO
-    GO_BUILD = $(GO_BUILD_WITH_CGO)
-    ifeq ($(LOCKDEBUG),)
-        LOCKDEBUG=1
-    endif
-else
-    GOTEST_COVER_OPTS += -covermode=count
-endif
+GO_BUILD_FLAGS += -ldflags '$(GO_BUILD_LDFLAGS) $(EXTRA_GO_BUILD_LDFLAGS)' -tags '$(call join-with-comma,$(GO_TAGS_FLAGS))' $(EXTRA_GO_BUILD_FLAGS)
+GO_TEST_FLAGS += -tags=$(call join-with-comma,$(GO_TAGS_FLAGS))
+GO_BUILD += $(GO_BUILD_FLAGS)
+GO_BUILD_WITH_CGO += $(GO_BUILD_FLAGS)
+# go test命令
+GO_TEST = CGO_ENABLED=0 $(GO) test $(GO_TEST_FLAGS) $(GOTEST_COVER_OPTS) $(TESTPKGS)
+# go clean命令
+GO_CLEAN = $(GO) clean $(GO_CLEAN_FLAGS)
+# go vet命令
+GO_VET = $(GO) vet
+# go list 命令
+GO_LIST = $(GO) list
 
-ifneq ($(LOCKDEBUG),)
-    GO_TAGS_FLAGS += lockdebug
-endif
+# 用于根据环境变量刷新go flags 在调用所有go xxx之前必须先调用这个函数
+define ensure_go_flags
+    $(eval GO_BUILD_LDFLAGS += $(if $(NOSTRIP),,-s -w))
+
+    $(eval GO_BUILD_FLAGS += $(if $(GO_MOD_VENDOR),-mod=vendor,))
+    $(eval GO_BUILD_FLAGS += $(if $(GO_MOD_VENDOR),-mod=vendor,))
+    $(eval GO_CLEAN_FLAGS += $(if $(GO_MOD_VENDOR),-mod=vendor,))
+
+    $(eval GO_BUILD_FLAGS += $(if $(RACE),-race,))
+    $(eval GO_TEST_FLAGS += $(if $(RACE),-race,))
+    $(eval GOTEST_COVER_OPTS += $(if $(RACE),-covermode=atomic,-covermode=count))
+    $(eval GO_BUILD := $(if $(RACE),$(GO_BUILD_WITH_CGO),))
+
+    $(eval GO_BUILD_FLAGS += $(if $(NOOPT),-gcflags="all=-N -l",))
+endef
 
 ## golangci-lint相关 ##
 
@@ -137,31 +175,13 @@ endif
 golangci-lint-fix: make_sure_go_workdir ## Run golangci-lint to automatically fix warnings
 	$(QUIET)$(MAKE) golangci-lint GOLANGCI_LINT_ARGS="--fix"
 
-lint: golangci-lint
+lint: golangci-lint ## Run golangci-lint
 
-lint-fix: golangci-lint-fix
+lint-fix: golangci-lint-fix ## Run golangci-lint to automatically fix warnings
 
-DOCKER_IMAGE_TAG?=latest
-
-# swagger
+## swagger相关 ##
 SWAGGER_VERSION := v0.30.3
 SWAGGER := $(CONTAINER_ENGINE) run -u $(shell id -u):$(shell id -g) --rm -v $(ROOT_DIR):$(ROOT_DIR) -w $(ROOT_DIR) --entrypoint swagger quay.io/goswagger/swagger:$(SWAGGER_VERSION)
-
-GO_BUILD_FLAGS += -ldflags '$(GO_BUILD_LDFLAGS) $(EXTRA_GO_BUILD_LDFLAGS)' -tags=$(call join-with-comma,$(GO_TAGS_FLAGS)) $(EXTRA_GO_BUILD_FLAGS)
-GO_TEST_FLAGS += -tags=$(call join-with-comma,$(GO_TAGS_FLAGS))
-
-ifeq ($(NOOPT),1)
-    GO_BUILD_FLAGS += -gcflags="all=-N -l"
-endif
-
-GO_BUILD += $(GO_BUILD_FLAGS)
-GO_BUILD_WITH_CGO += $(GO_BUILD_FLAGS)
-
-GO_TEST = CGO_ENABLED=0 $(GO) test $(GO_TEST_FLAGS)
-GO_CLEAN = $(GO) clean $(GO_CLEAN_FLAGS)
-
-GO_VET = $(GO) vet
-GO_LIST = $(GO) list
 
 # 生成等宽的符号行
 define print_line
@@ -200,8 +220,5 @@ endef
 # FORCE: 
 # 	@true
 define print_params_from_makefile
-    $(foreach v, $(MAKEFILE_LIST), \
-        $(info $(shell printf "\033[36m$(v): \033[0m")) \
-        $(info $(shell awk '/^#@/ {print substr($$0, 4)}' $(v))) \
-    )
+    @awk 'FNR==1 {if (NR>1) print ""; print "\033[36m" FILENAME ": \033[0m"} /^#@/ {gsub(/^#@ */, ""); print $$0}' $(MAKEFILE_LIST)
 endef
