@@ -8,7 +8,9 @@
   "includePaths": [
     "Makefile.defs",
     "test.yaml",
-    ".github/workflows/**"
+    ".github/workflows/**",
+    "go.mod",
+    "go.sum",
   ],
   "separateMajorMinor": true,
   "separateMultipleMajor": true,
@@ -34,7 +36,8 @@
         "^Makefile\\.defs$"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+VERSION = (?<currentValue>.*)\\s+.+SHA = (?<currentDigest>sha256:[a-f0-9]+)"
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+VERSION = (?<currentValue>.*)\\s+.+SHA = (?<currentDigest>sha256:[a-f0-9]+)",
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.+VERSION = (?<currentValue>.*)
       ]
     },
     {
