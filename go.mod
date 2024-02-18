@@ -1,6 +1,6 @@
 module github.com/Wangyiwei-So/flatten
 
-go 1.21.6
+go 1.22.0
 
 require golang.org/x/tools v0.18.0
 
