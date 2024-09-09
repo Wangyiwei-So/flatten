@@ -160,8 +160,8 @@ endef
 
 # golangci-lint工具版本，保持最新
 # renovate: datasource=docker depName=golangci/golangci-lint
-GOLANGCILINT_WANT_VERSION = v1.56.2
-GOLANGCILINT_IMAGE_SHA = sha256:04c2e881e069d6827ddca7d9c4fcf4de46eda0c10e58692609a047f8a09a0274
+GOLANGCILINT_WANT_VERSION = v1.61.0
+GOLANGCILINT_IMAGE_SHA = sha256:e47065d755ca0afeac9df866d1dabdc99f439653a43fe234e05f50d9c36b6b90
 # 本地golangci-lint工具版本
 GOLANGCILINT_VERSION = $(shell golangci-lint version --format short 2>/dev/null)
 ##@ GoLint
