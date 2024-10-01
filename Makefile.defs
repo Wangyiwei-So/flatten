@@ -61,7 +61,7 @@ TERM_WIDTH := $(shell tput cols)
 
 # Go版本确保最新
 # renovate: datasource=golang-version depName=go
-GO_VERSION := 1.22.0
+GO_VERSION := 1.22.8
 GOPATH ?= $(shell $(GO) env GOPATH)
 ifeq "$(GOPATH)" ""
   #$(error Please set the environment variable GOPATH before running `make`)
